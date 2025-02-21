@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# System Files
+.DS_Store
+Thumbs.db
+
 # Data Source
 *.csv
 *.tsv
