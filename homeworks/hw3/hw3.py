@@ -154,46 +154,51 @@ def learn_hmm(sentences, word_counts, unk_count, output_file="./output/hmm.json"
     
     return transition_probs, emission_probs
 
-
 def greedy_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"):
-    """
-    Implements the greedy decoding algorithm to predict part-of-speech tags for sentences.
-    """
+    # Extract known words from emission_probs keys (they are in the format "tag||word")
+    known_words = set(key.split("||")[1] for key in emission_probs.keys())
+    print("Unique words stored in emission_probs:", len(known_words))
+
     predictions = []
-    
+    valid_tags = set(key.split("||")[0] for key in emission_probs.keys())  # Extract unique POS tags
+
     print("Greedy decoding on the development data...", flush=True)
     print(f"Total {len(sentences)}, finished ", end="", flush=True)
-    i = 0
-    for sentence in sentences:
+    
+    for i, sentence in enumerate(sentences):
         prev_tag = None
         sentence_pred = []
         
         for entry in sentence:
             word = entry["word"]
-            # Handle unknown words (those not in the vocabulary)
-            if word not in emission_probs:
+            # Correct check for unknown words
+            if word not in known_words:
                 word = unk_token
             
             max_prob = 0
             best_tag = None
             
-            # For the first word, use any tag with max emission probability
             if prev_tag is None:
-                for tag in emission_probs:
+                # For the first word, select the tag with the highest emission probability
+                for tag in valid_tags:
                     prob = emission_probs.get(f"{tag}||{word}", 0)
                     if prob > max_prob:
                         max_prob = prob
                         best_tag = tag
             else:
-                # For subsequent words, consider both transition and emission probabilities
-                for tag in emission_probs:
-                    transition_prob = transition_probs.get(f"{prev_tag}||{tag}", 0)
-                    emission_prob = emission_probs.get(f"{tag}||{word}", 0)
+                # For subsequent words, use both transition and emission probabilities
+                for tag in valid_tags:
+                    transition_prob = transition_probs.get(f"{prev_tag}||{tag}", 1e-10)  # Avoid zero probabilities
+                    emission_prob = emission_probs.get(f"{tag}||{word}", 1e-10)
                     prob = transition_prob * emission_prob
-                    
                     if prob > max_prob:
                         max_prob = prob
                         best_tag = tag
+            
+            # Fallback in case no tag is found
+            if best_tag is None:
+                print(f"WARNING: No best tag found for '{word}', assigning 'NN' as default.")
+                best_tag = "NN"
             
             sentence_pred.append((entry["index"], word, best_tag))
             prev_tag = best_tag
@@ -201,13 +206,11 @@ def greedy_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"
         predictions.append(sentence_pred)
         if i % 100 == 0:
             print(f"{i}...", end="", flush=True)
-        i += 1
-        
+    
     print("Done!")
-    print("Run 'python eval.py −p {predicted file} −g {gold-standard file}'")
+    print("Run 'python eval.py -p {predicted file} -g {gold-standard file}'")
     
     return predictions
-
 
 def write_predictions_to_file(predictions, output_file):
     """
