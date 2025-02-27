@@ -5,6 +5,8 @@ import json
 train_file = "./data/train"  # Training file to READ
 dev_file = "./data/dev"  # Development file to READ
 test_file = "./data/test"  # Test file to READ
+if not os.path.exists("./output"):
+    os.makedirs("./output")
 vocab_file = "./output/vocab.txt"  # Vocabulary file to WRITE
 greedy_predicted_file = (
     "./output/greedy.out"  # Predicted POS tags using greedy decoding to WRITE
@@ -170,6 +172,7 @@ def greedy_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"
         tag = key.split("||")[0]
         valid_tags.add(tag)
 
+    print("-------- Greedy Decoding --------")
     print("Greedy decoding on the development data...", flush=True)
     print(f"Total {len(sentences)}, finished ", end="", flush=True)
 
@@ -216,11 +219,10 @@ def greedy_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"
             prev_tag = best_tag
 
         predictions.append(sentence_pred)
-        if i % 1000 == 0:
+        if i % 200 == 0:
             print(f"{i}...", end="", flush=True)
 
-    print("Done!")
-    print("Run 'python eval.py -p {predicted file} -g {gold-standard file}'")
+    print("Done!\n")
 
     return predictions
 
@@ -229,13 +231,15 @@ def write_predictions_to_file(predictions, output_file):
     """
     Write the predicted POS tags to a file in the required format.
     """
-    print("Writing predictions to", output_file)
+    print("Writing predictions to", output_file, end="... ", flush=True)
     with open(output_file, "w", encoding="utf-8") as f:
         for sentence in predictions:
             for index, word, predicted_tag in sentence:
                 f.write(f"{index}\t{word}\t{predicted_tag}\n")
             f.write("\n")  # Blank line to separate sentences
     print("Done!")
+    
+    print(f"Run 'python eval.py -p {output_file} -g {dev_file}' to evaluate the predictions!\n")
 
 
 def viterbi_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"):
@@ -254,6 +258,7 @@ def viterbi_decode(sentences, transition_probs, emission_probs, unk_token="<unk>
         valid_tags.add(tag)
 
     predictions = []
+    print("-------- Viterbi Decoding --------")
     print("Viterbi decoding on the development data...", flush=True)
     print(f"Total sentences: {len(sentences)}", flush=True)
 
@@ -323,11 +328,11 @@ def viterbi_decode(sentences, transition_probs, emission_probs, unk_token="<unk>
             sentence_pred.append((entry["index"], word, best_tags[t]))
         predictions.append(sentence_pred)
 
-        if i % 1000 == 0:
+        if i % 200 == 0:
             print(f"{i}...", end="", flush=True)
 
     print("Done!")
-    print("Run 'python eval.py -p {predicted file} -g {gold-standard file}'")
+
     return predictions
 
 
@@ -353,3 +358,8 @@ if __name__ == "__main__":
         dev_sentences, transition_probs, emission_probs
     )
     write_predictions_to_file(viterbi_predictions, viterbi_predicted_file)
+
+    evaluate = input("Evaluate the predictions? (y/n): ")
+    if evaluate.lower() == "y":
+        os.system(f"python eval.py -p {greedy_predicted_file} -g {dev_file}")
+        os.system(f"python eval.py -p {viterbi_predicted_file} -g {dev_file}")
