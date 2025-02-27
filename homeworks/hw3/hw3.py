@@ -1,3 +1,4 @@
+import os
 import json
 
 # Global configuration
@@ -5,7 +6,8 @@ train_file = "./data/train"  # Training file to READ
 dev_file = "./data/dev"  # Development file to READ
 test_file = "./data/test"  # Test file to READ
 vocab_file = "./output/vocab.txt"  # Vocabulary file to WRITE
-predicted_file = "./output/greedy.out"  # Prediction file to WRITE
+greedy_predicted_file = "./output/greedy.out"  # Predicted POS tags using greedy decoding to WRITE
+viterbi_predicted_file = "./output/viterbi.out"  # Predicted POS tags using Viterbi decoding to WRITE
 
 
 def read_data(data_path) -> list[list[dict]]:
@@ -159,6 +161,9 @@ def greedy_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"
     """
     predictions = []
     
+    print("Greedy decoding on the development data...", flush=True)
+    print(f"Total {len(sentences)}, finished ", end="", flush=True)
+    i = 0
     for sentence in sentences:
         prev_tag = None
         sentence_pred = []
@@ -194,6 +199,12 @@ def greedy_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"
             prev_tag = best_tag
         
         predictions.append(sentence_pred)
+        if i % 100 == 0:
+            print(f"{i}...", end="", flush=True)
+        i += 1
+        
+    print("Done!")
+    print("Run 'python eval.py −p {predicted file} −g {gold-standard file}'")
     
     return predictions
 
@@ -202,32 +213,26 @@ def write_predictions_to_file(predictions, output_file):
     """
     Write the predicted POS tags to a file in the required format.
     """
+    print("Writing predictions to", output_file)
     with open(output_file, "w", encoding="utf-8") as f:
         for sentence in predictions:
             for index, word, predicted_tag in sentence:
                 f.write(f"{index}\t{word}\t{predicted_tag}\n")
             f.write("\n")  # Blank line to separate sentences
-
-
-def evaluate_predictions(predicted_file, gold_standard_file):
-    """
-    Evaluates the predictions using the eval.py script.
-    """
-    import os
-    os.system(f"python eval.py -p {predicted_file} -g {gold_standard_file}")
+    print("Done!")
 
 
 if __name__ == "__main__":
     # Read the training data once
-    sentences = read_data(train_file)
+    train_sentences = read_data(train_file)
     
     # Create vocabulary using the training data
-    word_counts, unk_count, words_list = create_vocabulary(sentences, vocab_file)
+    word_counts, unk_count, words_list = create_vocabulary(train_sentences, vocab_file)
     
     # Train HMM using the same data
-    transition_probs, emission_probs = learn_hmm(sentences, word_counts, unk_count)
+    transition_probs, emission_probs = learn_hmm(train_sentences, word_counts, unk_count)
     
     # Greedy decoding on the development data
     dev_sentences = read_data(dev_file)
     dev_predictions = greedy_decode(dev_sentences, transition_probs, emission_probs)
-    write_predictions_to_file(dev_predictions, predicted_file)
+    write_predictions_to_file(dev_predictions, greedy_predicted_file)
