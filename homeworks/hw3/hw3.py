@@ -6,8 +6,12 @@ train_file = "./data/train"  # Training file to READ
 dev_file = "./data/dev"  # Development file to READ
 test_file = "./data/test"  # Test file to READ
 vocab_file = "./output/vocab.txt"  # Vocabulary file to WRITE
-greedy_predicted_file = "./output/greedy.out"  # Predicted POS tags using greedy decoding to WRITE
-viterbi_predicted_file = "./output/viterbi.out"  # Predicted POS tags using Viterbi decoding to WRITE
+greedy_predicted_file = (
+    "./output/greedy.out"  # Predicted POS tags using greedy decoding to WRITE
+)
+viterbi_predicted_file = (
+    "./output/viterbi.out"  # Predicted POS tags using Viterbi decoding to WRITE
+)
 
 
 def read_data(data_path) -> list[list[dict]]:
@@ -36,14 +40,12 @@ def read_data(data_path) -> list[list[dict]]:
                 parts = line.split("\t")
                 if len(parts) == 3:
                     index, word, tag = parts
-                    current_sentence.append({
-                        "index": index,
-                        "word": word,
-                        "tag": tag
-                    })
-        
+                    current_sentence.append({"index": index, "word": word, "tag": tag})
+
         if current_sentence:
-            sentences.append(current_sentence)  # Append last sentence if no blank line at the end
+            sentences.append(
+                current_sentence
+            )  # Append last sentence if no blank line at the end
 
     return sentences
 
@@ -151,33 +153,39 @@ def learn_hmm(sentences, word_counts, unk_count, output_file="./output/hmm.json"
     print(f"Number of emission parameters: {len(emission_probs)}")
     print(f"Model trained and saved to {output_file}.")
     print()
-    
+
     return transition_probs, emission_probs
+
 
 def greedy_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"):
     # Extract known words from emission_probs keys (they are in the format "tag||word")
-    known_words = set(key.split("||")[1] for key in emission_probs.keys())
-    print("Unique words stored in emission_probs:", len(known_words))
+    known_words = set()
+    for key in emission_probs.keys():
+        word = key.split("||")[1]
+        known_words.add(word)
 
     predictions = []
-    valid_tags = set(key.split("||")[0] for key in emission_probs.keys())  # Extract unique POS tags
+    valid_tags = set()
+    for key in emission_probs.keys():
+        tag = key.split("||")[0]
+        valid_tags.add(tag)
 
     print("Greedy decoding on the development data...", flush=True)
     print(f"Total {len(sentences)}, finished ", end="", flush=True)
-    
+
     for i, sentence in enumerate(sentences):
         prev_tag = None
         sentence_pred = []
-        
+
         for entry in sentence:
             word = entry["word"]
             # Correct check for unknown words
             if word not in known_words:
                 word = unk_token
-            
+
             max_prob = 0
             best_tag = None
-            
+
             if prev_tag is None:
                 # For the first word, select the tag with the highest emission probability
                 for tag in valid_tags:
@@ -188,29 +196,34 @@ def greedy_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"
             else:
                 # For subsequent words, use both transition and emission probabilities
                 for tag in valid_tags:
-                    transition_prob = transition_probs.get(f"{prev_tag}||{tag}", 1e-10)  # Avoid zero probabilities
+                    transition_prob = transition_probs.get(
+                        f"{prev_tag}||{tag}", 1e-10
+                    )  # Avoid zero probabilities
                     emission_prob = emission_probs.get(f"{tag}||{word}", 1e-10)
                     prob = transition_prob * emission_prob
                     if prob > max_prob:
                         max_prob = prob
                         best_tag = tag
-            
+
             # Fallback in case no tag is found
             if best_tag is None:
-                print(f"WARNING: No best tag found for '{word}', assigning 'NN' as default.")
+                print(
+                    f"WARNING: No best tag found for '{word}', assigning 'NN' as default."
+                )
                 best_tag = "NN"
-            
+
             sentence_pred.append((entry["index"], word, best_tag))
             prev_tag = best_tag
-        
+
         predictions.append(sentence_pred)
-        if i % 100 == 0:
+        if i % 1000 == 0:
             print(f"{i}...", end="", flush=True)
-    
+
     print("Done!")
     print("Run 'python eval.py -p {predicted file} -g {gold-standard file}'")
-    
+
     return predictions
+
 
 def write_predictions_to_file(predictions, output_file):
     """
@@ -225,17 +238,118 @@ def write_predictions_to_file(predictions, output_file):
     print("Done!")
 
 
+def viterbi_decode(sentences, transition_probs, emission_probs, unk_token="<unk>"):
+    """
+    Implements the Viterbi decoding algorithm to predict part-of-speech tags for sentences.
+    """
+    # Extract known words and valid tags from emission_probs keys
+    known_words = set()
+    for key in emission_probs.keys():
+        word = key.split("||")[1]
+        known_words.add(word)
+
+    valid_tags = set()
+    for key in emission_probs.keys():
+        tag = key.split("||")[0]
+        valid_tags.add(tag)
+
+    predictions = []
+    print("Viterbi decoding on the development data...", flush=True)
+    print(f"Total sentences: {len(sentences)}", flush=True)
+
+    for i, sentence in enumerate(sentences):
+        n = len(sentence)
+        V = (
+            {}
+        )  # V[t][tag] stores the highest probability for a tag sequence ending in tag at position t.
+        backpointer = (
+            {}
+        )  # backpointer[t][tag] stores the best previous tag for tag at position t.
+
+        # Initialization for t = 0 (first word)
+        V[0] = {}
+        backpointer[0] = {}
+        word = sentence[0]["word"]
+        if word not in known_words:
+            word = unk_token
+        for tag in valid_tags:
+            # No start probability is given, so we rely solely on the emission probability.
+            emission_prob = emission_probs.get(f"{tag}||{word}", 1e-10)
+            V[0][tag] = emission_prob
+            backpointer[0][tag] = None
+
+        # Recursion: fill in V[t] for t = 1, 2, ..., n-1
+        for t in range(1, n):
+            V[t] = {}
+            backpointer[t] = {}
+            word = sentence[t]["word"]
+            if word not in known_words:
+                word = unk_token
+            for tag in valid_tags:
+                max_prob = 0
+                best_prev_tag = None
+                # Consider all possible previous tags
+                for prev_tag in valid_tags:
+                    trans_prob = transition_probs.get(f"{prev_tag}||{tag}", 1e-10)
+                    prob = V[t - 1][prev_tag] * trans_prob
+                    if prob > max_prob:
+                        max_prob = prob
+                        best_prev_tag = prev_tag
+                emission_prob = emission_probs.get(f"{tag}||{word}", 1e-10)
+                V[t][tag] = max_prob * emission_prob
+                backpointer[t][tag] = best_prev_tag
+
+        # Termination: pick the tag with the highest probability at the final position
+        max_final_prob = 0
+        best_last_tag = None
+        for tag in valid_tags:
+            if V[n - 1][tag] > max_final_prob:
+                max_final_prob = V[n - 1][tag]
+                best_last_tag = tag
+
+        # Backtrace to recover the best tag sequence
+        best_tags = [None] * n
+        best_tags[n - 1] = best_last_tag
+        for t in range(n - 1, 0, -1):
+            best_tags[t - 1] = backpointer[t][best_tags[t]]
+
+        # Build the prediction for the current sentence
+        sentence_pred = []
+        for t, entry in enumerate(sentence):
+            # Again, ensure unknown words are replaced
+            word = entry["word"]
+            if word not in known_words:
+                word = unk_token
+            sentence_pred.append((entry["index"], word, best_tags[t]))
+        predictions.append(sentence_pred)
+
+        if i % 1000 == 0:
+            print(f"{i}...", end="", flush=True)
+
+    print("Done!")
+    print("Run 'python eval.py -p {predicted file} -g {gold-standard file}'")
+    return predictions
+
+
 if __name__ == "__main__":
     # Read the training data once
     train_sentences = read_data(train_file)
-    
+
     # Create vocabulary using the training data
     word_counts, unk_count, words_list = create_vocabulary(train_sentences, vocab_file)
-    
+
     # Train HMM using the same data
-    transition_probs, emission_probs = learn_hmm(train_sentences, word_counts, unk_count)
-    
+    transition_probs, emission_probs = learn_hmm(
+        train_sentences, word_counts, unk_count
+    )
+
     # Greedy decoding on the development data
     dev_sentences = read_data(dev_file)
     dev_predictions = greedy_decode(dev_sentences, transition_probs, emission_probs)
     write_predictions_to_file(dev_predictions, greedy_predicted_file)
+
+    # Viterbi decoding on the development data
+    viterbi_predictions = viterbi_decode(
+        dev_sentences, transition_probs, emission_probs
+    )
+    write_predictions_to_file(viterbi_predictions, viterbi_predicted_file)
