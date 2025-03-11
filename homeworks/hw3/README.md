@@ -40,7 +40,8 @@ Make sure to put `data` directory in the same directory as the code. As it is to
 - The code will generate the output files in the `output` directory.
 - The evaluation can be done using the following command:
   ```bash
-  python eval.py −p {predicted file} −g {gold-standard file}
+  python eval.py −p data/dev −g output/greedy.out
+  python eval.py −p data/dev −g output/viterbi.out
   ```
 
 
