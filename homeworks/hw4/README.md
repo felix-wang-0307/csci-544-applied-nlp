@@ -1,5 +1,11 @@
 # CSCI-544 Homework 4 - NER (Named Entity Recognition)
-
+## One-sentence summary
+This project implements a BiLSTM model for Named Entity Recognition (NER) on the CoNLL-2003 dataset, with and without GloVe embeddings, and evaluates the model on the dev data.
+```bash
+python task1.py  # Task 1 - without GloVe embeddings
+python task2.py  # Task 2 - with GloVe embeddings
+```
+See the following sections only if it fails to run (lol)
 ## File Structure
 ```
 The file structure is expected to be as follows:
