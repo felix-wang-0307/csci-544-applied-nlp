@@ -9,8 +9,7 @@ from vocab import load_vocab, load_tags
 from glove import load_glove_embeddings
 
 def predict(input_path, vocab_path, use_glove=False, glove_path="./data/glove.6B.100d.gz", model_path="blstm1.pt", output_path="out/dev1.out"):
-    word2idx = load_vocab(vocab_path)
-    idx2word = {v: k for k, v in word2idx.items()}
+    word2idx, idx2word = load_vocab(vocab_path)
     tag2idx = load_tags()
     idx2tag = {v: k for k, v in tag2idx.items()}
 
@@ -35,9 +34,11 @@ def predict(input_path, vocab_path, use_glove=False, glove_path="./data/glove.6B
 
     with open(output_path, 'w') as f:
         for sent_idx, sentence in enumerate(dataset.sentences):
+            print()
             for word_idx, word in enumerate(sentence):
+                print(idx2word[word], end=" ")
                 pred_tag = idx2tag[predictions[sent_idx][word_idx]]
-                f.write(f"{word_idx+1} {word} {pred_tag}\n")
+                f.write(f"{word_idx+1} {idx2word[word]} {pred_tag}\n")
             f.write("\n")
 
     print(f"Predictions saved to {output_path}")

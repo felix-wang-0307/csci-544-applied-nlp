@@ -1,9 +1,10 @@
-
+# This file implements a pipeline for training a BiLSTM model for Named Entity Recognition (NER) 
+# GloVe embeddings are NOT used for the model. 
 import os
 
 if __name__ == "__main__":
     # Train the model
-    os.system("python src/train.py -t data/train -d data/dev --save_model_path out/blstm1.pt --epochs 10 --batch_size 32 --learning_rate 0.1")
+    os.system("python src/train.py -t data/train -d data/dev --save_model_path out/blstm1.pt --epochs 20 --batch_size 32 --learning_rate 0.1")
     # Predict on dev data
     os.system("python src/predict.py -i data/dev -m out/blstm1.pt -o out/dev1.out")
     # Evaluate the predictions on dev data

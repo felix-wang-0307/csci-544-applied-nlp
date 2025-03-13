@@ -24,7 +24,7 @@ def train_model(
     learning_rate=0.05,
 ):
     # Load vocabulary and tags
-    word2idx = generate_vocab(train_path, vocab_path)
+    word2idx = generate_vocab([train_path, dev_path], vocab_path)
     tag2idx = load_tags()
 
     # Load datasets
