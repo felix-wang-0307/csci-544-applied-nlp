@@ -13,17 +13,20 @@ def predict(input_path, vocab_path, use_glove=False, has_tag=False, glove_path="
     tag2idx = load_tags()
     idx2tag = {v: k for k, v in tag2idx.items()}
 
+    print(f"Loading dataset from {input_path}...")
     dataset = NERDataset(input_path, word2idx, tag2idx, has_tag=has_tag)  
     loader = DataLoader(dataset, batch_size=32, shuffle=False, collate_fn=pad_collate)
 
     pretrained_embeddings = None
     if use_glove and os.path.exists(glove_path):
+        print(f"Loading GloVe embeddings from {glove_path}...")
         pretrained_embeddings = load_glove_embeddings(glove_path, word2idx)
 
     model = BiLSTMNER(len(word2idx), 100, 256, 128, len(tag2idx), pretrained_embeddings=pretrained_embeddings)
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
+    print("Predicting...")
     predictions = []
     with torch.no_grad():
         for x_batch, _, x_lens in loader:  # Ignore labels (None in test mode)

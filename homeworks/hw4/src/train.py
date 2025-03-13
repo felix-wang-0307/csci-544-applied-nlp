@@ -21,15 +21,16 @@ def train_model(
     save_model_path="./out/blstm1.pt",
     epochs=10,
     batch_size=32,
-    learning_rate=0.05,
+    learning_rate=0.1,
 ):
     # Load vocabulary and tags
     word2idx = generate_vocab([train_path, dev_path], vocab_path)
     tag2idx = load_tags()
 
-    # Load datasets
-    train_dataset = NERDataset(train_path, word2idx, tag2idx)
-    dev_dataset = NERDataset(dev_path, word2idx, tag2idx)
+    # Load datasets. Because we only use train and dev data to train, they all have tags.
+    print(f"Loading datasets {train_path} and {dev_path}...")
+    train_dataset = NERDataset(train_path, word2idx, tag2idx, has_tag=True)
+    dev_dataset = NERDataset(dev_path, word2idx, tag2idx, has_tag=True)
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate
     )
@@ -38,10 +39,12 @@ def train_model(
     )
 
     pretrained_embeddings = None
-    if use_glove:
+    if use_glove and os.path.exists(glove_path):
+        print("Loading GloVe embeddings from {glove_path}...")
         pretrained_embeddings = load_glove_embeddings(glove_path, word2idx)
 
     # Model
+    print("Training model...")
     model = BiLSTMNER(
         vocab_size=len(word2idx),
         embedding_dim=100,
