@@ -1,4 +1,10 @@
+# Models and output files
+*.pt
+*.pth
+*.out
+out/
 
+# Dataset
 data/
-
+*.zip
 *.gz

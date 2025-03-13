@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-def load_vocab(file_path):
+def generate_vocab(file_path, output_path="./out/vocab.txt"):
     word2idx = defaultdict(lambda: word2idx["<UNK>"])  # Default to "<UNK>"
     word2idx["<PAD>"] = 0
     word2idx["<UNK>"] = 1
@@ -11,6 +11,20 @@ def load_vocab(file_path):
                 _, word, _ = line.strip().split()
                 if word not in word2idx:
                     word2idx[word] = len(word2idx)
+    
+    if output_path:
+        with open(output_path, "w") as f:
+            for word, idx in word2idx.items():
+                f.write(f"{idx} {word}\n")
+    
+    return word2idx
+
+def load_vocab(file_path):
+    word2idx = {}
+    with open(file_path, "r") as f:
+        for line in f:
+            idx, word = line.strip().split()
+            word2idx[word] = int(idx)
     return word2idx
 
 def load_tags():
@@ -24,7 +38,7 @@ def load_tags():
 
 
 if __name__ == "__main__":
-    word2idx = load_vocab("../data/train")
+    word2idx = generate_vocab("../data/train")
     tag2idx = load_tags()
     print(word2idx)
     print(tag2idx)

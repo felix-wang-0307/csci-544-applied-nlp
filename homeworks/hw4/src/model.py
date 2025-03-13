@@ -2,11 +2,19 @@ import torch
 import torch.nn as nn
 
 class BiLSTMNER(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, linear_dim, tagset_size):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, linear_dim, tagset_size, pretrained_embeddings=None):
         super(BiLSTMNER, self).__init__()
+
+        # Embedding layer: either learnable or initialized with GloVe embeddings
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.bilstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=1, 
-                            bidirectional=True, batch_first=True, dropout=0.33)
+
+        if pretrained_embeddings is not None:
+            self.embedding = nn.Embedding.from_pretrained(pretrained_embeddings, freeze=False)
+
+        self.bilstm = nn.LSTM(
+            embedding_dim, hidden_dim, num_layers=1, 
+            bidirectional=True, batch_first=True, dropout=0.33
+        )
         self.linear = nn.Linear(hidden_dim * 2, linear_dim)
         self.elu = nn.ELU()
         self.classifier = nn.Linear(linear_dim, tagset_size)
