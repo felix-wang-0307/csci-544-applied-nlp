@@ -1,0 +1,1 @@
+print([input(), "".join(sorted(input().split(), key=__import__("functools").cmp_to_key(lambda x, y: -1 if x + y > y + x else 1)))][1])
