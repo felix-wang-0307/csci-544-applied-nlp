@@ -63,3 +63,13 @@ To run the task1 and task2 scripts, execute the following commands:
 python task1.py  # Task 1 - without GloVe embeddings
 python task2.py  # Task 2 - with GloVe embeddings
 ```
+## Configurate Hyperparameters
+The hyperparameters can be configured in the `task1.py` and `task2.py` scripts. 
+
+Change the numbers in this line:
+```python
+os.system("python src/train.py -t data/train -d data/dev --save_model_path out/blstm1.pt --epochs 25 --batch_size 32 --learning_rate 0.1")
+```
+Some other hyperparameters (e.g. `momentum`) can be configured directly in the `src/train.py` script.
+
+
