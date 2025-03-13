@@ -1,0 +1,58 @@
+import torch
+import torch.optim as optim
+import torch.nn as nn
+from torch.utils.data import DataLoader
+import sys
+import os
+import argparse
+
+from model import BiLSTMNER
+from dataset import NERDataset, pad_collate
+from vocab import load_vocab, load_tags
+
+def train_model(train_path, dev_path, save_model_path="./out/blstm1.pt", epochs=10, batch_size=32, learning_rate=0.05):
+    # Load vocabulary and tags
+    word2idx = load_vocab(train_path)
+    tag2idx = load_tags()
+
+    # Load datasets
+    train_dataset = NERDataset(train_path, word2idx, tag2idx)
+    dev_dataset = NERDataset(dev_path, word2idx, tag2idx)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate)
+    dev_loader = DataLoader(dev_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate)
+
+    # Model
+    model = BiLSTMNER(len(word2idx), 100, 256, 128, len(tag2idx))
+    criterion = nn.CrossEntropyLoss(ignore_index=-1)
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+
+    # Training loop
+    for epoch in range(epochs):
+        model.train()
+        total_loss = 0
+        for x_batch, y_batch, x_lens in train_loader:
+            optimizer.zero_grad()
+            outputs = model(x_batch, x_lens)
+            loss = criterion(outputs.view(-1, len(tag2idx)), y_batch.view(-1))
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+
+        print(f"Epoch {epoch+1}/{epochs} Loss: {total_loss/len(train_loader):.4f}")
+    
+    if not os.path.exists(os.path.dirname(save_model_path)):
+        os.makedirs(os.path.dirname(save_model_path))
+
+    torch.save(model.state_dict(), save_model_path)
+    print(f"Model saved to {save_model_path}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("train_path", type=str, help="Path to training data")
+    parser.add_argument("dev_path", type=str, help="Path to dev data")
+    parser.add_argument("--save_model_path", type=str, default="./out/blstm1.pt", help="Path to save model")
+    parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
+    parser.add_argument("--learning_rate", type=float, default=0.05, help="Learning rate")
+    args = parser.parse_args()
+    train_model(args.train_path, args.dev_path, args.save_model_path, args.epochs, args.batch_size, args.learning_rate)
