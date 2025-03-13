@@ -26,7 +26,7 @@ def predict(input_path, vocab_path, use_glove=False, has_tag=False, glove_path="
 
     predictions = []
     with torch.no_grad():
-        for x_batch, x_lens in loader:  # Test data has no labels
+        for x_batch, _, x_lens in loader:  # Ignore labels (None in test mode)
             outputs = model(x_batch, x_lens)
             pred_tags = outputs.argmax(dim=-1)
             for pred, length in zip(pred_tags, x_lens):

@@ -54,15 +54,18 @@ class NERDataset(Dataset):
 def pad_collate(batch):
     """
     Handles padding for variable-length sequences.
+    Returns (xx_pad, yy_pad, x_lens) in all cases.
     """
-    if isinstance(batch[0], tuple):
+    if isinstance(batch[0], tuple):  # Training/Dev Mode (with labels)
         (xx, yy) = zip(*batch)
         x_lens = [len(x) for x in xx]
         xx_pad = nn.utils.rnn.pad_sequence(xx, batch_first=True, padding_value=0)
         yy_pad = nn.utils.rnn.pad_sequence(yy, batch_first=True, padding_value=-1)
         return xx_pad, yy_pad, x_lens
-    else:
+    else:  # Test Mode (no labels)
         xx = batch
         x_lens = [len(x) for x in xx]
         xx_pad = nn.utils.rnn.pad_sequence(xx, batch_first=True, padding_value=0)
-        return xx_pad, x_lens  # No labels in test mode
+        yy_pad = None  # Return None for labels in test mode
+        return xx_pad, yy_pad, x_lens  # Consistent number of return values
+
