@@ -1,19 +1,27 @@
 import torch
 from torch.utils.data import DataLoader
+import os
+import argparse
 
 from model import BiLSTMNER
 from dataset import NERDataset, pad_collate
 from vocab import load_vocab, load_tags
+from glove import load_glove_embeddings
 
-def predict(input_path, model_path="blstm1.pt", output_path="out/dev1.out"):
-    word2idx = load_vocab(input_path)
+def predict(input_path, vocab_path, use_glove=False, glove_path="./data/glove.6B.100d.gz", model_path="blstm1.pt", output_path="out/dev1.out"):
+    word2idx = load_vocab(vocab_path)
+    idx2word = {v: k for k, v in word2idx.items()}
     tag2idx = load_tags()
     idx2tag = {v: k for k, v in tag2idx.items()}
 
     dataset = NERDataset(input_path, word2idx, tag2idx)
     loader = DataLoader(dataset, batch_size=32, shuffle=False, collate_fn=pad_collate)
 
-    model = BiLSTMNER(len(word2idx), 100, 256, 128, len(tag2idx))
+    pretrained_embeddings = None
+    if use_glove and os.path.exists(glove_path):
+        pretrained_embeddings = load_glove_embeddings(glove_path, word2idx)
+
+    model = BiLSTMNER(len(word2idx), 100, 256, 128, len(tag2idx), pretrained_embeddings=pretrained_embeddings)
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
@@ -35,4 +43,20 @@ def predict(input_path, model_path="blstm1.pt", output_path="out/dev1.out"):
     print(f"Predictions saved to {output_path}")
 
 if __name__ == "__main__":
-    predict("data/dev")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--vocab_path", type=str, default="./out/vocab.txt", help="Path to vocabulary")
+    parser.add_argument("-i", "--input_path", type=str, default="./data/dev", help="Path to data to predict")
+    parser.add_argument("-m", "--model_path", type=str, default="./out/blstm1.pt", help="Path to model")
+    parser.add_argument("--use_glove", action="store_true", help="Use GloVe embeddings")
+    parser.add_argument("--glove_path", type=str, default="./data/glove.6B.100d.gz", help="Path to GloVe embeddings")
+    parser.add_argument("-o", "--output_path", type=str, default="./out/dev1.out", help="Path to output data")
+    args = parser.parse_args()
+    
+    predict(
+        vocab_path=args.vocab_path,
+        input_path=args.input_path,
+        use_glove=args.use_glove,
+        glove_path=args.glove_path,
+        model_path=args.model_path,
+        output_path=args.output_path
+    )
