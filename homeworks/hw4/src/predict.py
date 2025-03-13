@@ -34,9 +34,7 @@ def predict(input_path, vocab_path, use_glove=False, glove_path="./data/glove.6B
 
     with open(output_path, 'w') as f:
         for sent_idx, sentence in enumerate(dataset.sentences):
-            print()
             for word_idx, word in enumerate(sentence):
-                print(idx2word[word], end=" ")
                 pred_tag = idx2tag[predictions[sent_idx][word_idx]]
                 f.write(f"{word_idx+1} {idx2word[word]} {pred_tag}\n")
             f.write("\n")

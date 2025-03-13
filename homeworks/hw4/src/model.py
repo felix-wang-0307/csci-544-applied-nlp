@@ -11,10 +11,9 @@ class BiLSTMNER(nn.Module):
         if pretrained_embeddings is not None:
             self.embedding = nn.Embedding.from_pretrained(pretrained_embeddings, freeze=False)
 
-        lstm_dropout = 0.33 if hidden_dim > 1 else 0
         self.bilstm = nn.LSTM(
             embedding_dim, hidden_dim, num_layers=1, 
-            bidirectional=True, batch_first=True, dropout=lstm_dropout
+            bidirectional=True, batch_first=True
         )
         self.linear = nn.Linear(hidden_dim * 2, linear_dim)
         self.elu = nn.ELU()
