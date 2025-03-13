@@ -8,7 +8,7 @@ from dataset import NERDataset, pad_collate
 from vocab import load_vocab, load_tags
 from glove import load_glove_embeddings
 
-def predict(input_path, vocab_path, use_glove=False, has_tag=False, glove_path="./data/glove.6B.100d.gz", model_path="blstm1.pt", output_path="out/dev1.out"):
+def predict(input_path, vocab_path, use_glove=False, has_tag=False, glove_path="./data/glove.6B.100d", model_path="blstm1.pt", output_path="out/dev1.out"):
     word2idx, idx2word = load_vocab(vocab_path)
     tag2idx = load_tags()
     idx2tag = {v: k for k, v in tag2idx.items()}
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model_path", type=str, default="./out/blstm1.pt", help="Path to model")
     parser.add_argument("--use_glove", action="store_true", help="Use GloVe embeddings")
     parser.add_argument("--has_tag", action="store_true", help="Input data has tags")
-    parser.add_argument("--glove_path", type=str, default="./data/glove.6B.100d.gz", help="Path to GloVe embeddings")
+    parser.add_argument("--glove_path", type=str, default="./data/glove.6B.100d", help="Path to GloVe embeddings")
     parser.add_argument("-o", "--output_path", type=str, default="./out/dev1.out", help="Path to output data")
     args = parser.parse_args()
     

@@ -17,7 +17,7 @@ def train_model(
     dev_path,
     vocab_path="./out/vocab.txt",
     use_glove=False,
-    glove_path="./data/glove.6B.100d.gz",
+    glove_path="./data/glove.6B.100d",
     save_model_path="./out/blstm1.pt",
     epochs=10,
     batch_size=32,
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--glove_path",
         type=str,
-        default="./data/glove.6B.100d.gz",
+        default="./data/glove.6B.100d",
         help="Path to GloVe embeddings"
     )
 
